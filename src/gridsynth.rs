@@ -345,6 +345,7 @@ where
     };
 
     for z in solutions {
+         config.candidates_tried += 1; 
         if (&z * z.conj()).residue() == 0 {
             continue;
         }
@@ -535,22 +536,16 @@ fn gridsynth(config: &mut GridSynthConfig, phase: PhaseMode) -> DOmegaUnitary {
 }
 
 pub fn gridsynth_gates(config: &mut GridSynthConfig) -> GridSynthResult {
-    // let start_total = if config.measure_time {
-    //     Some(Instant::now())
-    // } else {
-    //     None
-    // };
-
-    // let start_decompose = if config.measure_time {
-    //     Some(Instant::now())
-    // } else {
-    //     None
-    // };
-
     if !config.up_to_phase {
         // exact synthesis only
         let u_approx = gridsynth(config, PhaseMode::Exact);
         let gates = decompose_domega_unitary(u_approx);
+        let t_count = gates.chars().filter(|&c| c == 'T').count();
+
+        if config.stats {
+            println!("Candidates tried: {}", config.candidates_tried);
+            println!("T-count: {}", t_count);
+        }
 
         // Perform validation check, if required.
         let (error, is_correct) = match config.compute_error {
@@ -578,6 +573,16 @@ pub fn gridsynth_gates(config: &mut GridSynthConfig) -> GridSynthResult {
         let u_approx = gridsynth(config, PhaseMode::Shifted);
         let gates_shifted = decompose_domega_unitary(u_approx);
         let t_count_shifted = gates_shifted.chars().filter(|&c| c == 'T').count();
+
+        let final_t_count = if t_count_exact <= t_count_shifted {
+            t_count_exact
+        } else {
+            t_count_shifted
+        };
+
+        if config.stats {
+            println!("T-count: {}", final_t_count);
+        }
 
         if t_count_exact <= t_count_shifted {
             let (error, is_correct) = match config.compute_error {
