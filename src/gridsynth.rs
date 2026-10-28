@@ -552,6 +552,7 @@ pub fn gridsynth_gates(config: &mut GridSynthConfig) -> GridSynthResult {
             true => {
                 let (e, is_ok) =
                     compute_error(&gates, &config.theta, &config.epsilon, PhaseMode::Exact);
+                 println!("Error: {}", e);
                 (Some(e), Some(is_ok))
             }
             false => (None, None),
@@ -593,6 +594,7 @@ pub fn gridsynth_gates(config: &mut GridSynthConfig) -> GridSynthResult {
                         &config.epsilon,
                         PhaseMode::Exact,
                     );
+                     println!("Error: {}", e);
                     (Some(e), Some(is_ok))
                 }
                 false => (None, None),
@@ -613,6 +615,7 @@ pub fn gridsynth_gates(config: &mut GridSynthConfig) -> GridSynthResult {
                         &config.epsilon,
                         PhaseMode::Shifted,
                     );
+                     println!("Error: {}", e);
                     (Some(e), Some(is_ok))
                 }
                 false => (None, None),
