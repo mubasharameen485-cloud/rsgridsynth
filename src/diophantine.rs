@@ -15,12 +15,48 @@ use std::{
     collections::{HashMap, VecDeque},
     ops::Mul,
 };
+use std::cell::RefCell;
 
-static PRIMALITY_CACHE: LazyLock<Mutex<HashMap<IBig, bool>>> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
+thread_local! {
+    static LOCAL_PRIMALITY: RefCell<HashMap<IBig, bool>> = RefCell::new(HashMap::new());
+    static LOCAL_SQRT: RefCell<HashMap<(IBig, IBig), Option<IBig>>> = RefCell::new(HashMap::new());
+    static LOCAL_FACTOR: RefCell<HashMap<IBig, Option<IBig>>> = RefCell::new(HashMap::new());
+    static LOCAL_DIOPHANTINE: RefCell<HashMap<(IBig, IBig, i64), Option<DOmega>>> = RefCell::new(HashMap::new());
+}
 
-type SqrtCacheType = LazyLock<Mutex<HashMap<(IBig, IBig), Option<IBig>>>>;
-static SQRT_CACHE: SqrtCacheType = LazyLock::new(|| Mutex::new(HashMap::new()));
+pub struct PrimalityCacheWrapper;
+impl PrimalityCacheWrapper {
+    pub fn lock(&self) -> Result<std::cell::RefMut<'static, HashMap<IBig, bool>>, ()> {
+        LOCAL_PRIMALITY.with(|cell| {
+            let guard = cell.borrow_mut();
+            unsafe {
+                let leaked = std::mem::transmute::<std::cell::RefMut<'_, HashMap<IBig, bool>>, std::cell::RefMut<'static, HashMap<IBig, bool>>>(guard);
+                Ok(leaked)
+            }
+        })
+    }
+    pub fn try_lock(&self) -> Result<std::cell::RefMut<'static, HashMap<IBig, bool>>, ()> {
+        self.lock()
+    }
+}
+static PRIMALITY_CACHE: PrimalityCacheWrapper = PrimalityCacheWrapper;
+
+pub struct SqrtCacheWrapper;
+impl SqrtCacheWrapper {
+    pub fn lock(&self) -> Result<std::cell::RefMut<'static, HashMap<(IBig, IBig), Option<IBig>>>, ()> {
+        LOCAL_SQRT.with(|cell| {
+            let guard = cell.borrow_mut();
+            unsafe {
+                let leaked = std::mem::transmute::<std::cell::RefMut<'_, HashMap<(IBig, IBig), Option<IBig>>>, std::cell::RefMut<'static, HashMap<(IBig, IBig), Option<IBig>>>>(guard);
+                Ok(leaked)
+            }
+        })
+    }
+    pub fn try_lock(&self) -> Result<std::cell::RefMut<'static, HashMap<(IBig, IBig), Option<IBig>>>, ()> {
+        self.lock()
+    }
+}
+static SQRT_CACHE: SqrtCacheWrapper = SqrtCacheWrapper;
 
 // WARN: Distribution of random_ubig is different from the rng.random_range
 fn random_ubig<R>(bits: usize, rng: &mut R) -> UBig
@@ -348,8 +384,23 @@ fn decompose_relatively_prime(mut factors: Vec<(IBig, i32)>) -> (IBig, Vec<(IBig
     (u, facs)
 }
 
-static FACTOR_CACHE: LazyLock<Mutex<HashMap<IBig, Option<IBig>>>> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
+pub struct FactorCacheWrapper;
+impl FactorCacheWrapper {
+    pub fn lock(&self) -> Result<std::cell::RefMut<'static, HashMap<IBig, Option<IBig>>>, ()> {
+        LOCAL_FACTOR.with(|cell| {
+            let guard = cell.borrow_mut();
+            unsafe {
+                let leaked = std::mem::transmute::<std::cell::RefMut<'_, HashMap<IBig, Option<IBig>>>, std::cell::RefMut<'static, HashMap<IBig, Option<IBig>>>>(guard);
+                Ok(leaked)
+            }
+        })
+    }
+    pub fn try_lock(&self) -> Result<std::cell::RefMut<'static, HashMap<IBig, Option<IBig>>>, ()> {
+        self.lock()
+    }
+}
+static FACTOR_CACHE: FactorCacheWrapper = FactorCacheWrapper;
+
 
 fn find_factor<R: Rng + ?Sized>(
     n: &IBig,
@@ -841,7 +892,22 @@ fn diophantine(
 // Cache solutions w to the dyadic Diophantine equation w†w = ξ,
 // keyed by ξ's complete representation (xi.alpha.a, xi.alpha.b, xi.k).
 type DiophantineCacheType = LazyLock<Mutex<HashMap<(IBig, IBig, i64), Option<DOmega>>>>;
-static DIOPHANTINE_CACHE: DiophantineCacheType = LazyLock::new(|| Mutex::new(HashMap::new()));
+pub struct DiophantineCacheWrapper;
+impl DiophantineCacheWrapper {
+    pub fn lock(&self) -> Result<std::cell::RefMut<'static, HashMap<(IBig, IBig, i64), Option<DOmega>>>, ()> {
+        LOCAL_DIOPHANTINE.with(|cell| {
+            let guard = cell.borrow_mut();
+            unsafe {
+                let leaked = std::mem::transmute::<std::cell::RefMut<'_, HashMap<(IBig, IBig, i64), Option<DOmega>>>, std::cell::RefMut<'static, HashMap<(IBig, IBig, i64), Option<DOmega>>>>(guard);
+                Ok(leaked)
+            }
+        })
+    }
+    pub fn try_lock(&self) -> Result<std::cell::RefMut<'static, HashMap<(IBig, IBig, i64), Option<DOmega>>>, ()> {
+        self.lock()
+    }
+}
+static DIOPHANTINE_CACHE: DiophantineCacheWrapper = DiophantineCacheWrapper;
 
 pub fn clear_caches() {
     if let Ok(mut cache) = PRIMALITY_CACHE.try_lock() {

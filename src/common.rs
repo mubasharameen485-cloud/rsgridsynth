@@ -5,22 +5,26 @@ use dashu_base::RemEuclid;
 use dashu_float::{round::mode::HalfEven, FBig};
 use dashu_int::IBig;
 use once_cell::sync::Lazy;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::cell::Cell;
 
 const PREC_BITS_INITIAL: usize = 1000;
-pub static PREC_BITS: AtomicUsize = AtomicUsize::new(PREC_BITS_INITIAL);
 
-// Reset precision to the initial value
-pub fn reset_prec_bits() {
-    PREC_BITS.store(PREC_BITS_INITIAL, Ordering::Relaxed);
+// Thread-local storage: 
+thread_local! {
+    static PREC_BITS: Cell<usize> = Cell::new(PREC_BITS_INITIAL);
+}
+
+
+pub fn get_prec_bits() -> usize {
+    PREC_BITS.with(|bits| bits.get())
 }
 
 pub fn set_prec_bits(bits: usize) {
-    PREC_BITS.store(bits, Ordering::Relaxed);
+    PREC_BITS.with(|p| p.set(bits));
 }
 
-pub fn get_prec_bits() -> usize {
-    PREC_BITS.load(Ordering::Relaxed)
+pub fn reset_prec_bits() {
+    PREC_BITS.with(|p| p.set(PREC_BITS_INITIAL));
 }
 
 fn compute_pi() -> FBig<HalfEven> {
